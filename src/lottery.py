@@ -12,9 +12,6 @@ BASE_URL = "https://luck-draw.zaimanhua.com"
 SECRET = "pD4vj_159753twt"
 MOBILE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
 
-# 阅读任务所需的最短时间（分钟）
-READING_MINUTES_FOR_LOTTERY = 1
-
 
 def generate_sign(channel: str, timestamp: int) -> str:
     """生成 API 签名"""
@@ -88,23 +85,6 @@ def run_lottery_with_browser(cookie_str: str, token: str):
     """使用浏览器执行完整抽奖流程（包括点击任务按钮）"""
     print("\n  === 开始抽奖流程 (浏览器模式) ===")
 
-    # 0. 先检查是否需要执行阅读任务（需要在浏览器启动前执行）
-    print("\n  [0] 预检查任务状态...")
-    pre_status = check_lottery_status(token)
-    if pre_status.get("errno") == 0:
-        pre_data = pre_status.get("data", {})
-        pre_vote_info = pre_data.get("voteInfo", {})
-        if not pre_vote_info.get("isReading"):
-            print("    阅读任务未完成，先执行阅读...")
-            try:
-                from watch import run_watch
-                run_watch(cookie_str, watch_minutes=READING_MINUTES_FOR_LOTTERY)
-                print("    阅读任务执行完成")
-            except Exception as e:
-                print(f"    阅读任务执行失败: {e}")
-        else:
-            print("    阅读任务已完成")
-
     cookies = parse_cookies(cookie_str)
     # 为抽奖域名设置 cookies
     lottery_cookies = []
@@ -144,19 +124,23 @@ def run_lottery_with_browser(cookie_str: str, token: str):
 
             data = status.get("data", {})
             times = data.get("times", 0)
-            vote_info = data.get("voteInfo", {})
+
+            # 使用 xxxTimes 字段判断任务完成状态
+            follow_done = data.get('followTimes', 0) > 0
+            share_done = data.get('shareTimes', 0) > 0
+            read_done = data.get('readTimes', 0) > 0
 
             print(f"    当前抽奖次数: {times}")
-            print(f"    关注任务: {'已完成' if data.get('followTimes', 0) > 0 else '未完成'}")
-            print(f"    分享任务: {'已完成' if vote_info.get('isShare') else '未完成'}")
-            print(f"    阅读任务: {'已完成' if vote_info.get('isReading') else '未完成'}")
+            print(f"    关注任务: {'已完成' if follow_done else '未完成'}")
+            print(f"    分享任务: {'已完成' if share_done else '未完成'}")
+            print(f"    阅读任务: {'已完成' if read_done else '未完成'}")
 
             # 3. 点击任务按钮
             print("\n  [3] 执行任务...")
             initial_times = times
 
             # 任务一：关注微博（如果未完成）
-            if data.get('followTimes', 0) == 0:
+            if not follow_done:
                 print("    [任务一] 关注微博...")
                 follow_btn = page.locator("text=关注").first
                 if follow_btn.count() > 0:
@@ -170,7 +154,7 @@ def run_lottery_with_browser(cookie_str: str, token: str):
                 print("    [任务一] 关注微博: 已完成")
 
             # 任务二：分享页面（如果未完成）
-            if not vote_info.get("isShare"):
+            if not share_done:
                 print("    [任务二] 分享页面...")
                 share_btn = page.locator("text=分享").first
                 if share_btn.count() > 0:
@@ -183,11 +167,23 @@ def run_lottery_with_browser(cookie_str: str, token: str):
             else:
                 print("    [任务二] 分享页面: 已完成")
 
-            # 任务三：阅读漫画已在步骤0处理
-            if vote_info.get("isReading"):
-                print("    [任务三] 阅读漫画: 已完成")
+            # 任务三：阅读漫画（如果未完成）
+            if not read_done:
+                print("    [任务三] 阅读漫画...")
+                # 未完成时按钮显示"去完成"
+                read_btn = page.locator("text=去完成").first
+                if read_btn.count() > 0:
+                    try:
+                        read_btn.click(timeout=3000)
+                        page.wait_for_timeout(1500)
+                        print("      已点击去完成按钮")
+                    except:
+                        print("      去完成按钮点击失败")
+                else:
+                    print("      未找到去完成按钮")
+                    print("      提示：请先运行 watch.py 进行阅读")
             else:
-                print("    [任务三] 阅读漫画: 已在预检查阶段执行")
+                print("    [任务三] 阅读漫画: 已完成")
 
             # 4. 重新获取状态检查是否有新的抽奖次数
             page.wait_for_timeout(1000)
