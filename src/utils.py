@@ -276,6 +276,7 @@ def claim_task_reward(token, task_id):
         f'https://i.zaimanhua.com/lpi/v1/task/get_reward?taskId={task_id}',
     ]
 
+    last_result = None
     for url in claim_urls:
         try:
             # 尝试 POST 请求
@@ -288,6 +289,7 @@ def claim_task_reward(token, task_id):
                 errmsg = result.get('errmsg', '') or result.get('message', '')
                 if '已领取' in errmsg or '已完成' in errmsg:
                     return True, result
+                last_result = result
 
             # 尝试 GET 请求
             resp = requests.get(url, headers=headers, timeout=10)
@@ -298,10 +300,12 @@ def claim_task_reward(token, task_id):
                 errmsg = result.get('errmsg', '') or result.get('message', '')
                 if '已领取' in errmsg or '已完成' in errmsg:
                     return True, result
+                last_result = result
         except Exception as e:
+            last_result = {'errmsg': str(e)}
             continue
 
-    return False, None
+    return False, last_result
 
 
 def claim_rewards(page, cookie_str=None):
@@ -378,13 +382,33 @@ def claim_rewards(page, cookie_str=None):
         page.wait_for_timeout(5000)
 
         # 查找所有可领取的按钮（尝试多种选择器）
-        selectors = [".okBtn", ".claim-btn", ".receive-btn", "[class*='领取']", "button:has-text('领取')"]
+        selectors = [
+            ".okBtn", ".claim-btn", ".receive-btn", 
+            "button:has-text('领取')", 
+            "div:has-text('可领取')",  # 新增：针对测试中发现的文本
+            "text=可领取积分",        # 新增：精确匹配
+            "[class*='领取']"
+        ]
         claim_buttons = []
         for selector in selectors:
             try:
-                buttons = page.query_selector_all(selector)
+                # 使用 query_selector_all 可能拿不到伪元素或动态文本，
+                # 尝试 locator.all() 会更稳泛，但这里保持结构，先加 selector
+                if 'text=' in selector:
+                    buttons = page.locator(selector).all()
+                else:
+                    buttons = page.query_selector_all(selector)
+                
                 if buttons:
-                    claim_buttons.extend(buttons)
+                    for btn in buttons:
+                        # 再次过滤，确保可见且不是“已领取”
+                        try:
+                            if not btn.is_visible(): continue
+                            txt = btn.inner_text()
+                            if "已领取" in txt: continue
+                            if btn not in claim_buttons:
+                                claim_buttons.append(btn)
+                        except: pass
             except:
                 pass
 

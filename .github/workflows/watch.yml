@@ -22,10 +22,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install playwright requests python-dotenv
-          playwright install chromium
+          pip install requests python-dotenv
 
-      - name: Run watch script
+      - name: Run auto read script
         env:
           ZAIMANHUA_COOKIE: ${{ secrets.ZAIMANHUA_COOKIE }}
           ZAIMANHUA_COOKIE_1: ${{ secrets.ZAIMANHUA_COOKIE_1 }}
@@ -33,4 +32,4 @@ jobs:
           ZAIMANHUA_COOKIE_3: ${{ secrets.ZAIMANHUA_COOKIE_3 }}
           ZAIMANHUA_COOKIE_4: ${{ secrets.ZAIMANHUA_COOKIE_4 }}
           ZAIMANHUA_COOKIE_5: ${{ secrets.ZAIMANHUA_COOKIE_5 }}
-        run: python src/watch.py
+        run: python src/auto_read.py
