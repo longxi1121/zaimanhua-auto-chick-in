@@ -5,6 +5,19 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.4.3] - 2026-01-13
+
+### Added
+
+- 签到后自动领取"到此一游"任务积分 (`src/checkin.py`)
+  - 新增 `claim_checkin_reward` 函数
+  - 签到成功后自动检查并领取任务 ID=8 的积分奖励
+
+### Changed
+
+- 签到频率从每天 3 次改为每天 1 次（北京时间 8:00）
+- 签到重试次数从 3 次增加到 5 次
+
 ## [1.4.2] - 2026-01-13
 
 ### Fixed
