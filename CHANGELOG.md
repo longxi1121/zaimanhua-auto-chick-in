@@ -5,6 +5,16 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.4.2] - 2026-01-13
+
+### Fixed
+
+- 修复任务领取 API "参数错误"问题 (`src/utils.py`)
+  - `claim_task_reward`: 添加 POST + JSON body 方式传参
+  - 尝试多种参数名 (`id`, `taskId`, `task_id`) 提高兼容性
+  - `claim_rewards`: 修复状态判断逻辑 (`status==3` → `status==2`)
+  - 更新任务状态注释：`status=2` 为可领取，`status=3` 为已领取
+
 ## [1.4.1] - 2026-01-13
 
 ### Fixed
